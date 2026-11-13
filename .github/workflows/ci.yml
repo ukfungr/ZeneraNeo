@@ -7,7 +7,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    build:
+    format:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v5
@@ -15,35 +15,31 @@ jobs:
               with:
                   node-version: 24
                   cache: npm
+            - run: npm ci
+            - run: npm run format:check
 
+    typecheck:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            - run: npm run typecheck
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: npm
             - run: npm ci
             - run: npm run build
-
-            - name: Run checks in parallel
-              shell: bash
-              run: |
-                  npm run format:check &
-                  FORMAT_PID=$!
-
-                  npx tsc -p tsconfig.json --noEmit &
-                  TYPECHECK_PID=$!
-
-                  npx vitest run --exclude '**/live-*' &
-                  TEST_PID=$!
-
-                  FORMAT_STATUS=0
-                  wait $FORMAT_PID || FORMAT_STATUS=$?
-
-                  TYPECHECK_STATUS=0
-                  wait $TYPECHECK_PID || TYPECHECK_STATUS=$?
-
-                  TEST_STATUS=0
-                  wait $TEST_PID || TEST_STATUS=$?
-
-                  echo "format=$FORMAT_STATUS typecheck=$TYPECHECK_STATUS tests=$TEST_STATUS"
-                  if (( FORMAT_STATUS || TYPECHECK_STATUS || TEST_STATUS )); then
-                    exit 1
-                  fi
+            - run: npx vitest run --exclude '**/live-*'
 
     # BwrapSandbox, and the server running a turn through it, against a real
     # bubblewrap. Ubuntu 24.04 closes unprivileged user namespaces through

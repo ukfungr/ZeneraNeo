@@ -15,10 +15,33 @@ jobs:
               with:
                   node-version: 24
                   cache: npm
+
             - run: npm ci
-            - run: npm run format:check
-            - run: npm run typecheck
-            - run: npx vitest run --exclude '**/live-*'
+
+            - name: Run checks in parallel
+              shell: bash
+              run: |
+                  npm run format:check &
+                  FORMAT_PID=$!
+
+                  npm run typecheck &
+                  TYPECHECK_PID=$!
+
+                  npx vitest run --exclude '**/live-*' &
+                  TEST_PID=$!
+
+                  wait $FORMAT_PID
+                  FORMAT_STATUS=$?
+
+                  wait $TYPECHECK_PID
+                  TYPECHECK_STATUS=$?
+
+                  wait $TEST_PID
+                  TEST_STATUS=$?
+
+                  if (( FORMAT_STATUS || TYPECHECK_STATUS || TEST_STATUS )); then
+                    exit 1
+                  fi
 
     # BwrapSandbox, and the server running a turn through it, against a real
     # bubblewrap. Ubuntu 24.04 closes unprivileged user namespaces through

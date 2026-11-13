@@ -17,6 +17,7 @@ jobs:
                   cache: npm
 
             - run: npm ci
+            - run: npm run build
 
             - name: Run checks in parallel
               shell: bash
@@ -24,21 +25,22 @@ jobs:
                   npm run format:check &
                   FORMAT_PID=$!
 
-                  npm run typecheck &
+                  npx tsc -p tsconfig.json --noEmit &
                   TYPECHECK_PID=$!
 
                   npx vitest run --exclude '**/live-*' &
                   TEST_PID=$!
 
-                  wait $FORMAT_PID
-                  FORMAT_STATUS=$?
+                  FORMAT_STATUS=0
+                  wait $FORMAT_PID || FORMAT_STATUS=$?
 
-                  wait $TYPECHECK_PID
-                  TYPECHECK_STATUS=$?
+                  TYPECHECK_STATUS=0
+                  wait $TYPECHECK_PID || TYPECHECK_STATUS=$?
 
-                  wait $TEST_PID
-                  TEST_STATUS=$?
+                  TEST_STATUS=0
+                  wait $TEST_PID || TEST_STATUS=$?
 
+                  echo "format=$FORMAT_STATUS typecheck=$TYPECHECK_STATUS tests=$TEST_STATUS"
                   if (( FORMAT_STATUS || TYPECHECK_STATUS || TEST_STATUS )); then
                     exit 1
                   fi
